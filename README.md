@@ -30,14 +30,14 @@ After you have installed the required software, you can install MYOP by followin
 3. Add the following line at the end of the `.profile` file.
 
    ```
-   export PATH=$PATH:/usr/local/myop/scripts
+   export PATH=$PATH:/usr/local/myop/scripts:/usr/local/myop/bin
    ```
   
 # Predicting genes
-You can use the program ``myop-predict.pl`` to predict protein-coding genes.  This program receives the directory ``<model>`` of a trained gene model and a ``<fasta file>``.
+You can use the program ``myop-predict`` to predict protein-coding genes.  This program receives the directory ``<model>`` of a trained gene model and a ``<fasta file>``.
 
 ```
-myop-predict.pl -p <model> -f <fasta file> > out.gtf
+myop-predict -g <model> -f <fasta file> > out.gtf
 ```
 
 ## Tutorial
@@ -92,47 +92,4 @@ myop-train.pl -r <a customized model template> -g <gtf file> -f <fasta file> -o 
 ```
 
 
-[1] The default model template is located at https://github.com/myopdev/myopTemplates.git
-
-# Pre-trained Models 
-
-MYOP provides the following pre-trained gene model, feel free to download it.
-
-## Download all models
-
-* [All pre-trained models]()
-
-
-## Plants
-
-1. [_A. thaliana_]()
-2. [_O. sativa_]()
-3. [_Z. mays_]()
-
-
-
-## Insect
-
-1. [_D. melanogaster_](https://drive.google.com/uc?export=download&id=0B5edlnlwsocMTG9oaHJDdW1HcUE)
-
-
-## Mammals
-
-1. [_H. sapiens_]()
-2. [_M. musculus_]()
-3. [_R. norvegicus_]()
-
-## Parasite
-
-1. [_P. falciparum_]()
-
-
-## Fish
-
-1. [_D. rerio_]()
-
-
-## Nematodes
-
-1. [_C. elegans_](https://drive.google.com/uc?export=download&id=0B5edlnlwsocMRHhPM3RHc3ZScmc)
 
