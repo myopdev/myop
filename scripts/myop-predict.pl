@@ -18,11 +18,14 @@ use File::Basename 'dirname';
 my $predictor;
 my $genome;
 my $transcriptome;
-my $localmodel;
+my $localmodel_genome;
+my $localmodel_transcriptome;
+
 my $fasta;
 my $ncpu = 1;
 my $ghmm_model = "fixed_transition";
 my $list_model = 0;
+my $single_pass = 0;
 my $max_pass1_length = 400000;
 my $step = 1;
 my $help;
@@ -30,16 +33,18 @@ my $help;
 GetOptions("cpu=i" => \$ncpu,
            "genome|g=s" => \$genome,
            "transcriptome=s" => \$transcriptome,
-           "local=s" => \$localmodel,
+           "local_transcriptome|z=s" => \$localmodel_transcriptome,
+           "local_genome|s=s" => \$localmodel_genome,
            "fasta=s" => \$fasta,
            "ghmm_model|m=s" => \$ghmm_model,
            "max_pass1_length=i" => \$max_pass1_length,
+	   "single_pass|p" => \$single_pass,
            "help" => \$help);
 
 my $witherror = 0;
 
 sub print_help {
-  print STDERR "USAGE: " . basename($0) . " [-g <genome> | -t <transcriptome> | -l <local predictor>] -f <fasta file> [-c <number of cpu>] \n";
+  print STDERR "USAGE: " . basename($0) . " [-g <genome> | -t <transcriptome> | -z <local transcriptome predictor> | -s <local genome predictor] -f <fasta file> [-c <number of cpu>] \n";
 }
 
 if ($help) {
@@ -49,31 +54,26 @@ if ($help) {
 
 if ($genome) {
   $predictor = abs_path(dirname(abs_path($0)) . "/../genome/" . $genome);
+  $ghmm_model = "fixed_transition";
 }
 
+my $ghmm_partial = "../ghmm/model/ghmm_partial".".model";
 if ($transcriptome) {
-  $predictor = abs_path(dirname(abs_path($0)) . "/../transcriptome/" . $transcriptome)
+  $predictor = abs_path(dirname(abs_path($0)) . "/../transcriptome/" . $transcriptome);
+  $ghmm_partial = "../ghmm/model/ghmm_intronless".".model";
+  $ghmm_model = "intronless";
 }
 
-if ($localmodel) {
-  $predictor = abs_path($localmodel)
+if ($localmodel_transcriptome) {
+  $predictor = abs_path($localmodel_transcriptome);
+  $ghmm_partial = "../ghmm/model/ghmm_intronless".".model";
+  $ghmm_model = "intronless";
 }
 
-# if(! defined ($predictor)){
-#   $witherror = 1;
-#   print STDERR "ERROR: missing the predictor location!\n";
-# } else {
-#   if (substr($predictor, 0, 1) eq "."  || substr($predictor, 0, 1) eq "/") {
-#     $predictor = abs_path($predictor);
-#   } else {
-#     if ($genome) {
-#       $predictor = abs_path(dirname(abs_path($0)) . "/../genome/" . $predictor)
-#     }
-#     if ($transcriptome) {
-#       $predictor = abs_path(dirname(abs_path($0)) . "/../transcriptome/" . $predictor)
-#     }
-#   }
-# }
+if ($localmodel_genome) {
+  $predictor = abs_path($localmodel_genome);
+  $ghmm_model = "fixed_transition";
+}
 
 if (! defined ($fasta)) {
   $witherror = 1;
@@ -103,7 +103,6 @@ $fasta = abs_path($fasta);
 
 my $ghmm_model_name = $ghmm_model;
 $ghmm_model = "../ghmm/model/ghmm_$ghmm_model".".model";
-my $ghmm_partial = "../ghmm/model/ghmm_partial".".model";
 
 #
 # validate the fasta file.
@@ -231,10 +230,10 @@ sub preserve_order_pass1 {
 
       for(my $k = 0; $k <= $#seq; ) {
 	my $split_point = (($k + $task->{start})/$max_pass1_length)*$max_pass1_length;
-	if (!($seq[$k] =~  m/N|Ns|Nf/)) {
+	if (!($seq[$k] =~  m/N|Ns|Nf|begin|end/)) {
 	  my $start = $k + $task->{start} - 100;
 	  if ($start <= 0) {$start= 1;}
-	  while(($k < $#seq) && !($seq[$k] =~/N|Ns|Nf/)) { $k++ ;}
+	  while(($k < $#seq) && !($seq[$k] =~/N|Ns|Nf|begin|end/)) { $k++ ;}
 	  my $end = $k + $task->{start} + 100;
 	  if($end >= $task->{length}) { $end = $task->{length}-1 ; }
 	  if(scalar( @tasks2) > 0) {
@@ -279,33 +278,52 @@ sub preserve_order_pass2 {
       my @t = @{$tmp2{$order_id}};
       my $task = $t[0];
       my $seq = $result[0];
-      my $pid = open2(*Reader, *Writer, "scripts/tops_to_gtf_".$ghmm_model_name.".pl") or die "cant execute tops_to_gtf : $!";
+      if(!defined $seq || $seq eq "") {
+	$seq = "";
+        print STDERR "ERROR $0: something wrong\n";
+        return;
+      }
+      #print STDERR $seq."\n";
+         
+      my $pid = open2(*Reader, *Writer, "scripts/tops_to_gtf_".$ghmm_model_name.".pl 2> /tmp/err") or die "cant execute tops_to_gtf : $!";
       print Writer $seq;
       close(Writer);
-
+      my $flag = 0;
+      $gid ++;
       while (my $got = <Reader>) {
 	my $gtf_string = $got;
 	foreach my $l (split (/\n/, $gtf_string)) {
 	  my @f = split(/\t/, $l);
 	  if( scalar (@f) > 3) {
-	    if (($f[2] =~ /start/) && ($f[6] eq "+")) {
-	      $gid ++;
-	      print "\n";
-	    } elsif (($f[2] =~ /stop/) && ($f[6] eq "-")) {
-	      $gid ++;
-	      print "\n";
+	    if($flag == 1) { 
+	      if (($f[2] =~ /start/) && ($f[6] eq "+")) {
+		$gid ++;
+	      } elsif (($f[2] =~ /stop/) && ($f[6] eq "-")) {
+		$gid ++;
+	      }
+	    } else {
+	      if (($f[2] =~ /start/) && ($f[6] eq "+")) {
+		print "\n";
+	      } elsif (($f[2] =~ /stop/) && ($f[6] eq "-")) {
+		print "\n";
+	      }
 	    }
+
 	    my $gname = "myop.$gid";
 	    $f[8] = "gene_id \"$gname\"; transcript_id \"$gname\";\n";
 	    print join("\t", @f);
-	  } else {
+	    $flag = 1;
+	 } else {
 	    print "\n";
 	  }
+
 	}
       }
       delete $tmp{$order_id++};
       close(PRED);
+      waitpid($pid, 0);
     }
+    close(Reader);
     return;
   }
 }
@@ -342,7 +360,8 @@ my $mce = MCE->new (input_data=>\@tasks,  max_workers => $ncpu, chunk_size => 1,
     my $pid = open2(*Reader, *Writer, "myop-fasta_to_tops  | tops-viterbi_decoding -m $ghmm_partial 2> /dev/null ") or die "cant execute viterbi_decoding:$!";
     print Writer $seq;
     close(Writer);
-    my $got = <Reader> ;
+
+    my $got = <Reader>;
     chomp($got);
     my @seq = split(/ /,$got);
     shift @seq;
@@ -351,13 +370,17 @@ my $mce = MCE->new (input_data=>\@tasks,  max_workers => $ncpu, chunk_size => 1,
     closedir(GHMM);
     push @result_t, $task;
     MCE->gather($chunk_id, \@result_t, \@result);
+    close(Reader);
+    waitpid($pid, 0);
   });
 
-$mce->run;
-my $x = 1;
-foreach my $t (@tasks2) {
-  print STDERR $t->{seqname}."\tsegment\tgene\t".$t->{start}."\t".$t->{end}."\t.\t.\ts".$x."\n";
-  $x ++;
+if($single_pass != 1) {
+  print STDERR "TWO PASS PREDICTION\n";
+  $mce->run;
+  my $x = 1;
+  foreach my $t (@tasks2) {
+    $x ++;
+  }
 }
 
 
@@ -394,7 +417,7 @@ my $mce2 = MCE->new (input_data=>\@tasks2,  max_workers => $ncpu, chunk_size => 
 
       opendir (GHMM, "$predictor/ghmm.$mid") or die "Cant open $predictor/ghmm.$mid: $!\n";
       chdir(GHMM);
-      my $pid = open2(*Reader, *Writer, "myop-fasta_to_tops  | tops-viterbi_decoding -m $ghmm_model 2> /dev/null") or die "cant execute viterbi_decoding:$!";
+      my $pid = open2(*Reader, *Writer, "myop-fasta_to_tops  | tops-viterbi_decoding -m $ghmm_model 2> /tmp/err") or die "cant execute viterbi_decoding:$!";
       print Writer $seq;
       close(Writer);
       while (my $got = <Reader>) {
@@ -402,6 +425,8 @@ my $mce2 = MCE->new (input_data=>\@tasks2,  max_workers => $ncpu, chunk_size => 
       }
       closedir(GHMM);
       push @result_t, $task;
+      close(Reader);
+      waitpid($pid, 0);
     }
     MCE->gather($chunk_id, \@result_t, \@result);
   }

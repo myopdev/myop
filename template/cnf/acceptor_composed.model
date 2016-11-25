@@ -1,0 +1,14 @@
+model_name = "MultipleSequentialModels"
+branch = "model/branch.model"
+acceptor = "../ghmm/model/acceptor.model"
+init_pattern = "model/acceptor_initial_pattern.model"
+models = ("branch", "acceptor", "init_pattern")
+max_length= (<branch_length>, <acceptor_length>, <acceptor_initial_pattern_length>)
+
+# myop_revcomp:max_length = (<acceptor_initial_pattern_length>,<acceptor_length>,<branch_length>)
+# myop_revcomp:models = ("init_pattern", "acceptor", "branch")
+# myop_revcomp:branch = "model/branch_rev.model"
+# myop_revcomp:acceptor = "../ghmm/model/acceptor_rev.model"
+# myop_revcomp:init_pattern = "model/acceptor_initial_pattern_rev.model"
+# myop_train = "cp ../ghmm/cnf/acceptor_composed.model  ../ghmm/model/acceptor_composed.model"
+# myop_revcomp:myop_train = "cp ../ghmm/cnf/acceptor_composed_rev.model  ../ghmm/model/acceptor_composed_rev.model"

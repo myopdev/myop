@@ -1,0 +1,13 @@
+model_name = "MultipleSequentialModels"
+donor= "../ghmm/model/donor.model"
+init_pattern= "../ghmm/model/donor_initial_pattern.model"
+models = ("init_pattern", "donor")
+max_length= ( <donor_initial_pattern_length>, <donor_length>)
+# myop_revcomp:donor= "../ghmm/model/donor_rev.model"
+# myop_revcomp:init_pattern= "../ghmm/model/donor_initial_pattern_rev.model"
+# myop_revcomp:models = ("donor", "init_pattern")
+# myop_revcomp:max_length= ( <donor_length>,<donor_initial_pattern_length>)
+# myop_train = "cp ../ghmm/cnf/donor_composed.model  ../ghmm/model/donor_composed.model"
+# myop_revcomp:myop_train = "cp ../ghmm/cnf/donor_composed_rev.model  ../ghmm/model/donor_composed_rev.model"
+
+
