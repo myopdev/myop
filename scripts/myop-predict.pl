@@ -54,7 +54,7 @@ if ($help) {
 
 if ($genome) {
   $predictor = abs_path(dirname(abs_path($0)) . "/../genome/" . $genome);
-  $ghmm_model = "fixed_transition";
+  #$ghmm_model = "fixed_transition";
 }
 
 my $ghmm_partial = "../ghmm/model/ghmm_partial".".model";
@@ -72,7 +72,7 @@ if ($localmodel_transcriptome) {
 
 if ($localmodel_genome) {
   $predictor = abs_path($localmodel_genome);
-  $ghmm_model = "fixed_transition";
+  #$ghmm_model = "fixed_transition";
 }
 
 if (! defined ($fasta)) {

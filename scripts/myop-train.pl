@@ -53,8 +53,9 @@ if (! defined ($output_dir)){
 }
 if(! defined ($repository)){
   $repository = abs_path(dirname(abs_path($0)) . "/../template");
+}elsif ((!$repository =~ m|://|)) {
+  $repository = abs_path("$repository");
 }
-
 if( $witherror) {
   print_help();
   exit(-1);
@@ -118,9 +119,6 @@ mkdir "$output_dir/ghmm/model";
 
 copy ($gtf, "$output_dir/dataset/train.gtf");
 copy ($fasta, "$output_dir/dataset/train.fa");
-if ((!$repository =~ m|://|)) {
-  $repository = abs_path("$repository");
-}
 opendir(GHMM, "$output_dir") or die "cant open directory $output_dir!\n";
 chdir (GHMM);
 if ($verbose) {
