@@ -34,7 +34,7 @@ GetOptions("cpu=i" => \$ncpu,
            "genome|g=s" => \$genome,
            "transcriptome=s" => \$transcriptome,
            "local_transcriptome|z=s" => \$localmodel_transcriptome,
-           "local_genome|s=s" => \$localmodel_genome,
+           "local_genome|s|l=s" => \$localmodel_genome,
            "fasta=s" => \$fasta,
            "ghmm_model|m=s" => \$ghmm_model,
            "max_pass1_length=i" => \$max_pass1_length,
@@ -62,12 +62,15 @@ if ($transcriptome) {
   $predictor = abs_path(dirname(abs_path($0)) . "/../transcriptome/" . $transcriptome);
   $ghmm_partial = "../ghmm/model/ghmm_intronless".".model";
   $ghmm_model = "intronless";
+  $single_pass = 1;
+
 }
 
 if ($localmodel_transcriptome) {
   $predictor = abs_path($localmodel_transcriptome);
   $ghmm_partial = "../ghmm/model/ghmm_intronless".".model";
   $ghmm_model = "intronless";
+  $single_pass = 1;
 }
 
 if ($localmodel_genome) {
@@ -280,7 +283,7 @@ sub preserve_order_pass2 {
       my $seq = $result[0];
       if(!defined $seq || $seq eq "") {
 	$seq = "";
-        print STDERR "ERROR $0: something wrong\n";
+        print STDERR "ERROR $0: something wrong: $ghmm_model_name\n";
         return;
       }
       #print STDERR $seq."\n";
